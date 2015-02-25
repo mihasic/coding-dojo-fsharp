@@ -73,7 +73,8 @@ open System.IO
 // returns an array of strings for each line 
  
 // [ YOUR CODE GOES HERE! ]
- 
+let training_sample = File.ReadAllLines(@"C:\Dev\GitHub\mihasic\coding-dojo-fsharp\1. DigitsRecognizer\trainingsample.csv") 
+let validation_sample = File.ReadAllLines(@"C:\Dev\GitHub\mihasic\coding-dojo-fsharp\1. DigitsRecognizer\validationsample.csv") 
  
 // 2. EXTRACTING COLUMNS
  
@@ -103,6 +104,8 @@ let splitResult = csvToSplit.Split(',')
  
 // [ YOUR CODE GOES HERE! ]
  
+let training_split = training_sample |> Array.map (fun s -> s.Split(','))
+let validation_split = validation_sample |> Array.map (fun s -> s.Split(','))
  
 // 3. CLEANING UP HEADERS
  
@@ -121,6 +124,8 @@ let upToThree = someNumbers.[ .. 2 ]
 
 
 // [ YOUR CODE GOES HERE! ]
+let training_nohead = training_split.[1..]
+let validation_nohead = validation_split.[1..]
  
  
 // 4. CONVERTING FROM STRINGS TO INTS
@@ -137,6 +142,12 @@ let convertedInt = Convert.ToInt32("42")
  
  
 // [ YOUR CODE GOES HERE! ]
+let training_ints =
+    training_nohead
+        |> Array.map (fun ints -> ints |> Array.map Convert.ToInt32)
+let validation_ints =
+    validation_nohead
+        |> Array.map (fun ints -> ints |> Array.map Convert.ToInt32)
  
  
 // 5. CONVERTING ARRAYS TO RECORDS
@@ -154,6 +165,12 @@ let example = { Label = 1; Pixels = [| 1; 2; 3; |] }
 
  
 // [ YOUR CODE GOES HERE! ]
+let training_records =
+    training_ints
+        |> Array.map (fun x -> { Label = x.[0]; Pixels = x.[1..] })
+let validation_records =
+    validation_ints
+        |> Array.map (fun x -> { Label = x.[0]; Pixels = x.[1..] })
  
  
 // 6. COMPUTING DISTANCES
@@ -186,7 +203,14 @@ let distance (p1: int[]) (p2: int[]) = 42
 // 42 is likely not the right answer
  
 // [ YOUR CODE GOES HERE! ]
- 
+let distance2 (p1: int[]) (p2: int[]) =
+    Array.map2 (fun x y -> (x-y)*(x-y)) p1 p2
+    |> Array.sum
+
+
+//let distances =
+//    Array.map2 (fun r1 r2 -> (r1, r2)) training_records validation_records
+//    |> Array.map (fun(r1, r2) -> distance2 r1.Pixels r2.Pixels)
  
 // 7. WRITING THE CLASSIFIER FUNCTION
  
@@ -210,7 +234,6 @@ let findThatGuy =
     someData 
     |> Array.maxBy (fun x -> x.Pixels.[0])
 // </F# QUICK-STARTER> 
-
  
 // <F# QUICK-STARTER> 
 // F# and closures work very well together
@@ -235,8 +258,13 @@ let classify (unknown:int[]) =
     0 
  
 // [ YOUR CODE GOES HERE! ]
- 
- 
+let classify2 (unknown:int[]) =
+    training_records
+    |> Array.map (fun r -> distance2 r.Pixels unknown)
+    |> Array.map2 (fun x y -> (x, y)) training_records
+    |> Array.minBy snd
+    |> fst
+
 // 8. EVALUATING THE MODEL AGAINST VALIDATION DATA
  
 // Now that we have a classifier, we need to check
@@ -252,3 +280,10 @@ let classify (unknown:int[]) =
  
  
 // [ YOUR CODE GOES HERE! ]
+let result =
+    validation_records
+    |> Array.map (fun r -> (r, classify2 r.Pixels))
+    |> Array.partition (fun (r1, r2) -> r1.Label = r2.Label)
+    |> (fun (x, y) -> (x.Length, y.Length))
+    |> (fun (x, y) -> sprintf "%d : %d -> %d %%" x y ((x*100)/(x+y)))
+
